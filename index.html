@@ -16,15 +16,15 @@
   <div id="msg"></div>
 
   <script>
-    // ▼▼▼ This URL will be pasted in a later step ▼▼▼
-    const scriptURL = "https://script.google.com/macros/s/AKfycbzUOgPVWDxXVuLc84Ts26fGWS_Z4jMOSdFxLkHeKBEyf5l3bVEEYrLT8SmvnJsZ3tc5/exec";
-    // ▲▲▲ This URL will be pasted in a later step ▲▲▲
+    // ▼▼▼ THIS URL WILL BE REPLACED IN THE NEXT STEP ▼▼▼
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbwYq5OXH7F4EsLRAIZcjJkBRf8VIQiYVhjQa_a5w5ViaLkug0WjpNcTWG1jkOJHCKoH/exec';
+    // ▲▲▲ THIS URL WILL BE REPLACED IN THE NEXT STEP ▲▲▲
 
     const msalConfig = {
       auth: {
-        clientId: "431b6b30-a967-431b-9852-e09635a28a40", // Your Azure App Client ID
-        authority: "https://login.microsoftonline.com/7359f896-71e2-4dae-b8a3-15cdf97f2f10", // Your Azure App Tenant ID
-        redirectUri: "https://quiet-alpaca-d3bd2c.netlify.app/" // We will fill this in later
+        clientId: "431b6b30-a967-431b-9852-e09635a28a40",
+        authority: "https://login.microsoftonline.com/7359f896-71e2-4dae-b8a3-15cdf97f2f10",
+        redirectUri: "https://quiet-alpaca-d3bd2c.netlify.app/"
       }
     };
 
@@ -54,19 +54,19 @@
           signInButton.disabled = false;
           return;
         }
-
+        
         msgDiv.innerText = "Submitting attendance, please wait...";
         const formData = new FormData();
         formData.append('email', email);
         formData.append('studentId', studentId);
 
         const response = await fetch(scriptURL, { method: 'POST', body: formData });
-        const resultText = await response.text();
-        msgDiv.innerText = resultText;
+        const resultJson = await response.json();
+        msgDiv.innerText = resultJson.message;
 
       } catch (err) {
         console.error(err);
-        msgDiv.innerText = "Sign-in or submission failed. Please try again.";
+        msgDiv.innerText = "Sign-in or submission failed. Check console (F12) for details.";
       } finally {
         signInButton.disabled = false;
       }
