@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Secure Attendance</title>
+  <script src="https://alcdn.msauth.net/browser/2.25.0/js/msal-browser.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
+    button { padding: 12px 25px; font-size: 18px; background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 5px; }
+    button:disabled { background-color: #777; cursor: not-allowed; }
+    #msg { margin-top: 20px; color: #007bff; font-weight: bold; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>Class Attendance</h1>
+  <button id="signInButton" onclick="signIn()">Sign in with Microsoft</button>
+  <div id="msg"></div>
+
+  <script>
+    // ▼▼▼ This URL will be pasted in a later step ▼▼▼
+    const scriptURL = 'PASTE_YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE';
+    // ▲▲▲ This URL will be pasted in a later step ▲▲▲
+
+    const msalConfig = {
+      auth: {
+        clientId: "431b6b30-a967-431b-9852-e09635a28a40", // Your Azure App Client ID
+        authority: "https://login.microsoftonline.com/7359f896-71e2-4dae-b8a3-15cdf97f2f10", // Your Azure App Tenant ID
+        redirectUri: "YOUR_NETLIFY_URL_WILL_GO_HERE" // We will fill this in later
+      }
+    };
+
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+    const signInButton = document.getElementById('signInButton');
+    const msgDiv = document.getElementById('msg');
+
+    async function signIn() {
+      signInButton.disabled = true;
+      msgDiv.innerText = "Please sign in with Microsoft...";
+
+      try {
+        const loginResponse = await msalInstance.loginPopup({ scopes: ["user.read"] });
+        const email = loginResponse.account.username;
+
+        if (!email.endsWith("@adityauniversity.in")) {
+          msgDiv.innerText = "Only @adityauniversity.in emails are allowed.";
+          signInButton.disabled = false;
+          return;
+        }
+
+        const match = email.match(/^([0-9A-Z]{10})@adityauniversity\.in$/i);
+        const studentId = match ? match[1].toUpperCase() : null;
+
+        if (!studentId) {
+          msgDiv.innerText = "Invalid email format. Could not extract Student ID.";
+          signInButton.disabled = false;
+          return;
+        }
+
+        msgDiv.innerText = "Submitting attendance, please wait...";
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('studentId', studentId);
+
+        const response = await fetch(scriptURL, { method: 'POST', body: formData });
+        const resultText = await response.text();
+        msgDiv.innerText = resultText;
+
+      } catch (err) {
+        console.error(err);
+        msgDiv.innerText = "Sign-in or submission failed. Please try again.";
+      } finally {
+        signInButton.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
