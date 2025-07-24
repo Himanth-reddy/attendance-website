@@ -32,7 +32,7 @@
 
   <script>
     // Your Google Apps Script URL
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbxwNFg6nzDgMXW59EhDv2YKc5WFiHCyArPoYUy1NGgwdXDSP1kkWIQjq03UhbYf5J-W/exec';
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbynASjPnzZtrckeV6pHV6Rn9hq6Yx1jIVxxpTZImVZv-cljJhQZTUZ8Tf5WwrndiXiS/exec';
 
     const msalConfig = {
       auth: {
@@ -84,7 +84,7 @@
 
       } catch (err) {
         console.error('Error in signIn:', err);
-        showMessage("❌ Sign-in failed. Please try again or check console (F12) for details.", "error");
+        showMessage("❌ Sign-in failed. Please try again.", "error");
       } finally {
         signInButton.disabled = false;
       }
