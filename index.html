@@ -4,18 +4,31 @@
   <title>Secure Attendance</title>
   <script src="https://alcdn.msauth.net/browser/2.25.0/js/msal-browser.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
-    button { padding: 12px 25px; font-size: 18px; background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 5px; }
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; background-color: #f8f9fa; }
+    .container { max-width: 500px; margin: 0 auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h1 { color: #333; margin-bottom: 30px; }
+    button { padding: 12px 25px; font-size: 18px; background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 5px; margin: 10px; transition: background-color 0.3s; }
+    button:hover { background-color: #218838; }
     button:disabled { background-color: #777; cursor: not-allowed; }
-    #msg { margin-top: 20px; color: #007bff; font-weight: bold; font-size: 18px; }
-    .error { color: #dc3545; }
-    .success { color: #28a745; }
+    #msg { margin-top: 20px; padding: 15px; border-radius: 5px; font-weight: bold; font-size: 16px; }
+    .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    .loading { color: #007bff; }
+    .date-info { margin-top: 10px; font-size: 14px; color: #666; }
+    .student-info { margin-top: 15px; padding: 10px; background-color: #e9ecef; border-radius: 5px; font-size: 14px; }
   </style>
 </head>
 <body>
-  <h1>Class Attendance</h1>
-  <button id="signInButton" onclick="signIn()">Sign in with Microsoft</button>
-  <div id="msg"></div>
+  <div class="container">
+    <h1>📚 Class Attendance</h1>
+    <div class="date-info">
+      Today: <span id="currentDate"></span>
+    </div>
+    <button id="signInButton" onclick="signIn()">🔐 Sign in with Microsoft</button>
+    <div id="msg"></div>
+    <div id="studentInfo" class="student-info" style="display: none;"></div>
+  </div>
 
   <script>
     // Your Google Apps Script URL
@@ -32,19 +45,25 @@
     const msalInstance = new msal.PublicClientApplication(msalConfig);
     const signInButton = document.getElementById('signInButton');
     const msgDiv = document.getElementById('msg');
+    const studentInfoDiv = document.getElementById('studentInfo');
+
+    // Display current date
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
 
     async function signIn() {
       signInButton.disabled = true;
-      msgDiv.innerText = "Please sign in with Microsoft...";
-      msgDiv.className = "";
+      showMessage("🔄 Please sign in with Microsoft...", "loading");
+      hideStudentInfo();
 
       try {
         const loginResponse = await msalInstance.loginPopup({ scopes: ["user.read"] });
         const email = loginResponse.account.username;
 
+        // Show student info
+        showStudentInfo(email);
+
         if (!email.endsWith("@adityauniversity.in")) {
-          msgDiv.innerText = "Only @adityauniversity.in emails are allowed.";
-          msgDiv.className = "error";
+          showMessage("❌ Only @adityauniversity.in emails are allowed.", "error");
           signInButton.disabled = false;
           return;
         }
@@ -53,22 +72,19 @@
         const studentId = match ? match[1].toUpperCase() : null;
 
         if (!studentId) {
-          msgDiv.innerText = "Invalid email format. Could not extract Student ID.";
-          msgDiv.className = "error";
+          showMessage("❌ Invalid email format. Could not extract Student ID.", "error");
           signInButton.disabled = false;
           return;
         }
         
-        msgDiv.innerText = "Submitting attendance, please wait...";
-        msgDiv.className = "";
+        showMessage("📝 Submitting attendance, please wait...", "loading");
 
         // Submit attendance with proper error handling
         await submitAttendance(email, studentId);
 
       } catch (err) {
         console.error('Error in signIn:', err);
-        msgDiv.innerText = "Sign-in or submission failed. Check console (F12) for details.";
-        msgDiv.className = "error";
+        showMessage("❌ Sign-in failed. Please try again or check console (F12) for details.", "error");
       } finally {
         signInButton.disabled = false;
       }
@@ -85,25 +101,22 @@
           body: formData 
         });
 
-        // Log the response status
         console.log('Response status:', response.status);
 
-        // Get the raw response text first
         const responseText = await response.text();
         console.log('Raw response:', responseText);
 
         // Check if the response is HTML (error page)
         if (responseText.trim().startsWith('<') || responseText.includes('<!DOCTYPE')) {
           console.error('Received HTML instead of JSON');
-          throw new Error('Server returned an error page instead of JSON. Check if the web app URL is correct and the deployment is active.');
+          throw new Error('Server returned an error page. Please check if the script is properly deployed.');
         }
 
-        // Check if response is empty
         if (!responseText.trim()) {
           throw new Error('Server returned empty response');
         }
 
-        // Try to parse JSON
+        // Parse JSON response
         let resultJson;
         try {
           resultJson = JSON.parse(responseText);
@@ -111,44 +124,72 @@
           console.error('JSON parse error:', parseError);
           console.error('Response that failed to parse:', responseText);
           
-          // Handle legacy plain text responses
           if (responseText.toLowerCase().includes('success')) {
-            // It's a plain text success message
-            msgDiv.innerText = responseText;
-            msgDiv.className = "success";
-            return; // Exit successfully
+            showMessage(`✅ ${responseText}`, "success");
+            return;
           } else if (responseText.toLowerCase().includes('error')) {
             throw new Error(`Server error: ${responseText}`);
           }
           
-          throw new Error(`Invalid JSON response from server: ${responseText.substring(0, 100)}...`);
+          throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}...`);
         }
 
         // Handle the JSON response
         if (resultJson.success === true) {
-          msgDiv.innerText = resultJson.message || "Attendance submitted successfully!";
-          msgDiv.className = "success";
+          showMessage(`✅ ${resultJson.message}`, "success");
+          
+          // Show additional info if available
+          if (resultJson.data) {
+            const info = `Submitted at: ${resultJson.data.time} on ${resultJson.data.date}`;
+            setTimeout(() => {
+              showMessage(`✅ ${resultJson.message}<br><small>${info}</small>`, "success");
+            }, 1000);
+          }
+          
         } else if (resultJson.success === false) {
-          msgDiv.innerText = resultJson.message || "Failed to submit attendance";
-          msgDiv.className = "error";
+          // Check if it's a duplicate submission
+          if (resultJson.duplicate || resultJson.submittedToday) {
+            showMessage(`⚠️ ${resultJson.message}`, "warning");
+          } else {
+            showMessage(`❌ ${resultJson.message}`, "error");
+          }
         } else {
-          // Legacy format - check message content
+          // Legacy format handling
           const message = resultJson.message || "Unknown response";
           if (message.toLowerCase().includes('success')) {
-            msgDiv.innerText = message;
-            msgDiv.className = "success";
+            showMessage(`✅ ${message}`, "success");
           } else {
-            msgDiv.innerText = message;
-            msgDiv.className = "error";
+            showMessage(`❌ ${message}`, "error");
           }
         }
 
       } catch (error) {
         console.error('Attendance submission error:', error);
-        msgDiv.innerText = `Failed to submit attendance: ${error.message}`;
-        msgDiv.className = "error";
-        throw error; // Re-throw to be caught by signIn()
+        showMessage(`❌ Failed to submit attendance: ${error.message}`, "error");
+        throw error;
       }
+    }
+
+    function showMessage(message, type) {
+      msgDiv.innerHTML = message;
+      msgDiv.className = type;
+      msgDiv.style.display = 'block';
+    }
+
+    function showStudentInfo(email) {
+      const match = email.match(/^([0-9A-Z]{10})@adityauniversity\.in$/i);
+      const studentId = match ? match[1].toUpperCase() : 'Unknown';
+      
+      studentInfoDiv.innerHTML = `
+        <strong>Student Info:</strong><br>
+        Email: ${email}<br>
+        Student ID: ${studentId}
+      `;
+      studentInfoDiv.style.display = 'block';
+    }
+
+    function hideStudentInfo() {
+      studentInfoDiv.style.display = 'none';
     }
   </script>
 </body>
