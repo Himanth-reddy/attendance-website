@@ -76,77 +76,59 @@
     }
 
     async function submitAttendance(email, studentId) {
-      try {
-        const formData = new FormData();
-        formData.append('email', email);
-        formData.append('studentId', studentId);
+  const WEB_APP_URL = 'YOUR_ACTUAL_WEB_APP_URL_HERE'; // Replace with your URL
+  
+  try {
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('studentId', studentId);
 
-        const response = await fetch(scriptURL, { 
-          method: 'POST', 
-          body: formData 
-        });
+    const response = await fetch(WEB_APP_URL, {
+      method: 'POST',
+      body: formData
+    });
 
-        // Log the response status
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-
-        // Get the raw response text first
-        const responseText = await response.text();
-        console.log('Raw response:', responseText);
-
-        // Check if the response is HTML (error page)
-        if (responseText.trim().startsWith('<') || responseText.includes('<!DOCTYPE')) {
-          console.error('Received HTML instead of JSON');
-          throw new Error('Server returned an error page instead of JSON. Check if the web app URL is correct and the deployment is active.');
-        }
-
-        // Check if response is empty
-        if (!responseText.trim()) {
-          throw new Error('Server returned empty response');
-        }
-
-        // Try to parse JSON
-        let resultJson;
-        try {
-          resultJson = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError);
-          console.error('Response that failed to parse:', responseText);
-          
-          // If it looks like a plain text error message
-          if (responseText.toLowerCase().includes('error')) {
-            throw new Error(`Server error: ${responseText}`);
-          }
-          
-          throw new Error(`Invalid JSON response from server: ${responseText.substring(0, 100)}...`);
-        }
-
-        // Handle the response
-        if (resultJson.success === true) {
-          msgDiv.innerText = resultJson.message || "Attendance submitted successfully!";
-          msgDiv.className = "success";
-        } else if (resultJson.success === false) {
-          msgDiv.innerText = resultJson.message || "Failed to submit attendance";
-          msgDiv.className = "error";
-        } else {
-          // Legacy format - check message content
-          const message = resultJson.message || "Unknown response";
-          if (message.toLowerCase().includes('success')) {
-            msgDiv.innerText = message;
-            msgDiv.className = "success";
-          } else {
-            msgDiv.innerText = message;
-            msgDiv.className = "error";
-          }
-        }
-
-      } catch (error) {
-        console.error('Attendance submission error:', error);
-        msgDiv.innerText = `Failed to submit attendance: ${error.message}`;
-        msgDiv.className = "error";
-        throw error; // Re-throw to be caught by signIn()
-      }
+    // Check if response is OK
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    // Get response text first
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+
+    // Try to parse JSON
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Response text:', responseText);
+      throw new Error('Invalid JSON response from server');
+    }
+
+    if (result.success) {
+      console.log('Success:', result.message);
+      return result;
+    } else {
+      console.error('Server error:', result.message);
+      throw new Error(result.message);
+    }
+
+  } catch (error) {
+    console.error('Request failed:', error);
+    throw error;
+  }
+}
+
+// Usage example
+submitAttendance('student@example.com', '12345')
+  .then(result => {
+    console.log('Attendance recorded:', result);
+  })
+  .catch(error => {
+    console.error('Failed to record attendance:', error.message);
+  });
   </script>
 </body>
 </html>
