@@ -1,33 +1,355 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Secure Attendance</title>
   <script src="https://alcdn.msauth.net/browser/2.25.0/js/msal-browser.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; background-color: #f8f9fa; }
-    .container { max-width: 500px; margin: 0 auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h1 { color: #333; margin-bottom: 30px; }
-    button { padding: 12px 25px; font-size: 18px; background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 5px; margin: 10px; transition: background-color 0.3s; }
-    button:hover { background-color: #218838; }
-    button:disabled { background-color: #777; cursor: not-allowed; }
-    #msg { margin-top: 20px; padding: 15px; border-radius: 5px; font-weight: bold; font-size: 16px; }
-    .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
-    .loading { color: #007bff; }
-    .date-info { margin-top: 10px; font-size: 14px; color: #666; }
-    .student-info { margin-top: 15px; padding: 10px; background-color: #e9ecef; border-radius: 5px; font-size: 14px; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container { 
+      width: 100%;
+      max-width: 450px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      padding: 2rem;
+      text-align: center;
+      animation: slideUp 0.6s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 { 
+      color: #2c3e50;
+      margin-bottom: 1.5rem;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 700;
+    }
+
+    .date-info {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 25px;
+      margin-bottom: 2rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+    }
+
+    button { 
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 12px;
+      margin: 15px 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button:hover { 
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled { 
+      background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
+    }
+
+    button:disabled::before {
+      display: none;
+    }
+
+    #msg { 
+      margin-top: 1.5rem;
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      display: none;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .error { 
+      background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+      color: white;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    }
+
+    .success { 
+      background: linear-gradient(135deg, #51cf66, #40c057);
+      color: white;
+      box-shadow: 0 4px 15px rgba(81, 207, 102, 0.3);
+    }
+
+    .warning { 
+      background: linear-gradient(135deg, #ffd43b, #fab005);
+      color: #2c3e50;
+      box-shadow: 0 4px 15px rgba(255, 212, 59, 0.3);
+    }
+
+    .loading { 
+      background: linear-gradient(135deg, #74c0fc, #339af0);
+      color: white;
+      box-shadow: 0 4px 15px rgba(116, 192, 252, 0.3);
+      position: relative;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: translateY(-50%) rotate(360deg); }
+    }
+
+    .student-info { 
+      margin-top: 1.5rem;
+      padding: 20px;
+      background: linear-gradient(135deg, #e9ecef, #dee2e6);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      color: #2c3e50;
+      display: none;
+      animation: slideDown 0.5s ease-out;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #495057;
+    }
+
+    .info-value {
+      font-family: 'Courier New', monospace;
+      background: rgba(255,255,255,0.8);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    /* Mobile specific adjustments */
+    @media (max-width: 480px) {
+      body {
+        padding: 15px;
+      }
+      
+      .container {
+        padding: 1.5rem;
+        border-radius: 15px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+      }
+      
+      button {
+        padding: 14px 18px;
+        font-size: 1rem;
+      }
+      
+      .date-info {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+      }
+      
+      .info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+      }
+      
+      .info-value {
+        margin-top: 4px;
+        align-self: stretch;
+        text-align: center;
+      }
+    }
+
+    /* Landscape mobile adjustments */
+    @media (max-height: 500px) and (orientation: landscape) {
+      body {
+        padding: 10px;
+      }
+      
+      .container {
+        padding: 1rem;
+        max-width: 600px;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .date-info {
+        margin-bottom: 1rem;
+      }
+    }
+
+    /* Tablet adjustments */
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .container {
+        max-width: 500px;
+        padding: 2.5rem;
+      }
+    }
+
+    /* High DPI displays */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      .container {
+        border: 0.5px solid rgba(255,255,255,0.2);
+      }
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .container {
+        background: rgba(30, 30, 30, 0.95);
+        color: #e9ecef;
+      }
+      
+      h1 {
+        color: #f8f9fa;
+      }
+      
+      .student-info {
+        background: linear-gradient(135deg, #343a40, #495057);
+        color: #e9ecef;
+      }
+      
+      .info-label {
+        color: #adb5bd;
+      }
+      
+      .info-value {
+        background: rgba(255,255,255,0.1);
+        color: #f8f9fa;
+      }
+    }
+
+    /* Focus states for accessibility */
+    button:focus {
+      outline: 3px solid rgba(102, 126, 234, 0.5);
+      outline-offset: 2px;
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>📚 Class Attendance</h1>
     <div class="date-info">
-      Today: <span id="currentDate"></span>
+      📅 Today: <span id="currentDate"></span>
     </div>
     <button id="signInButton" onclick="signIn()">🔐 Sign in with Microsoft</button>
     <div id="msg"></div>
-    <div id="studentInfo" class="student-info" style="display: none;"></div>
+    <div id="studentInfo" class="student-info"></div>
   </div>
 
   <script>
@@ -38,7 +360,7 @@
       auth: {
         clientId: "431b6b30-a967-431b-9852-e09635a28a40",
         authority: "https://login.microsoftonline.com/7359f896-71e2-4dae-b8a3-15cdf97f2f10",
-        redirectUri: "https://quiet-alpaca-d3bd2c.netlify.app/"
+        redirectUri: window.location.origin + window.location.pathname
       }
     };
 
@@ -47,8 +369,26 @@
     const msgDiv = document.getElementById('msg');
     const studentInfoDiv = document.getElementById('studentInfo');
 
+    // Dynamic date formatting based on locale
+    function formatDate() {
+      const now = new Date();
+      const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      };
+      return now.toLocaleDateString(navigator.language || 'en-US', options);
+    }
+
     // Display current date
-    document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
+    document.getElementById('currentDate').innerText = formatDate();
+
+    // Update date every minute
+    setInterval(() => {
+      document.getElementById('currentDate').innerText = formatDate();
+    }, 60000);
 
     async function signIn() {
       signInButton.disabled = true;
@@ -56,7 +396,10 @@
       hideStudentInfo();
 
       try {
-        const loginResponse = await msalInstance.loginPopup({ scopes: ["user.read"] });
+        const loginResponse = await msalInstance.loginPopup({ 
+          scopes: ["user.read"],
+          prompt: "select_account"
+        });
         const email = loginResponse.account.username;
 
         // Show student info
@@ -84,7 +427,15 @@
 
       } catch (err) {
         console.error('Error in signIn:', err);
-        showMessage("❌ Sign-in failed. Please try again.", "error");
+        
+        // Handle specific MSAL errors
+        if (err.errorCode === "user_cancelled") {
+          showMessage("⚠️ Sign-in was cancelled.", "warning");
+        } else if (err.errorCode === "popup_window_error") {
+          showMessage("❌ Popup blocked. Please allow popups and try again.", "error");
+        } else {
+          showMessage("❌ Sign-in failed. Please try again.", "error");
+        }
       } finally {
         signInButton.disabled = false;
       }
@@ -98,7 +449,8 @@
 
         const response = await fetch(scriptURL, { 
           method: 'POST', 
-          body: formData 
+          body: formData,
+          mode: 'cors'
         });
 
         console.log('Response status:', response.status);
@@ -146,12 +498,22 @@
             }, 1000);
           }
           
+          // Vibrate on success (mobile devices)
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+          }
+          
         } else if (resultJson.success === false) {
           // Check if it's a duplicate submission
           if (resultJson.duplicate || resultJson.submittedToday) {
             showMessage(`⚠️ ${resultJson.message}`, "warning");
           } else {
             showMessage(`❌ ${resultJson.message}`, "error");
+          }
+          
+          // Vibrate on error (mobile devices)
+          if (navigator.vibrate) {
+            navigator.vibrate(200);
           }
         } else {
           // Legacy format handling
@@ -166,6 +528,12 @@
       } catch (error) {
         console.error('Attendance submission error:', error);
         showMessage(`❌ Failed to submit attendance: ${error.message}`, "error");
+        
+        // Vibrate on error (mobile devices)
+        if (navigator.vibrate) {
+          navigator.vibrate(200);
+        }
+        
         throw error;
       }
     }
@@ -174,6 +542,13 @@
       msgDiv.innerHTML = message;
       msgDiv.className = type;
       msgDiv.style.display = 'block';
+      
+      // Auto-hide success messages after 5 seconds
+      if (type === 'success') {
+        setTimeout(() => {
+          msgDiv.style.display = 'none';
+        }, 5000);
+      }
     }
 
     function showStudentInfo(email) {
@@ -181,9 +556,14 @@
       const studentId = match ? match[1].toUpperCase() : 'Unknown';
       
       studentInfoDiv.innerHTML = `
-        <strong>Student Info:</strong><br>
-        Email: ${email}<br>
-        Student ID: ${studentId}
+        <div class="info-row">
+          <span class="info-label">📧 Email:</span>
+          <span class="info-value">${email}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">🆔 Student ID:</span>
+          <span class="info-value">${studentId}</span>
+        </div>
       `;
       studentInfoDiv.style.display = 'block';
     }
@@ -191,6 +571,53 @@
     function hideStudentInfo() {
       studentInfoDiv.style.display = 'none';
     }
+
+    // Handle network connectivity
+    window.addEventListener('online', () => {
+      if (msgDiv.classList.contains('error') && msgDiv.innerHTML.includes('network')) {
+        showMessage("🌐 Connection restored. You can try again.", "success");
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      showMessage("⚠️ No internet connection. Please check your network.", "warning");
+    });
+
+    // Handle page visibility changes (useful for mobile)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Page is hidden
+        console.log('Page hidden');
+      } else {
+        // Page is visible again
+        console.log('Page visible');
+        // Update the date when page becomes visible
+        document.getElementById('currentDate').innerText = formatDate();
+      }
+    });
+
+    // Prevent zoom on double tap (iOS Safari)
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+      const now = (new Date()).getTime();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+
+    // Handle orientation changes
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        // Recalculate viewport height after orientation change
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      }, 100);
+    });
+
+    // Set initial viewport height
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
   </script>
 </body>
 </html>
